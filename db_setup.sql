@@ -1,7 +1,3 @@
--- ============================================
--- Portfolio Backend - Database Setup
--- Run this once to create the database & table
--- ============================================
 
 CREATE DATABASE IF NOT EXISTS portfolio_db
   CHARACTER SET utf8mb4
