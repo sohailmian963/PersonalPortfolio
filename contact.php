@@ -1,29 +1,20 @@
 <?php
-// ============================================================
-// contact.php — Contact Form Handler
-// Accepts AJAX POST → validates → saves to DB → sends email
-// ============================================================
 
 declare(strict_types=1);
 
 require_once __DIR__ . '/includes/db.php';
-
-// ── Only accept POST requests ────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     exit(json_encode(['success' => false, 'message' => 'Method not allowed.']));
 }
 
-// ── CSRF / Origin check (basic) ──────────────────────────────
-$allowed_origins = ['http://localhost', 'https://sohailmian.com']; // apna domain add karo
+$allowed_origins = ['http://localhost', 'https://sohailmian.com'];
 $origin = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '';
-// In production uncomment the block below:
 // if (!in_array(rtrim($origin, '/'), $allowed_origins, true)) {
 //     http_response_code(403);
 //     exit(json_encode(['success' => false, 'message' => 'Forbidden.']));
 // }
 
-// ── Rate Limiting (simple session-based) ────────────────────
 session_start();
 $now = time();
 $window = 60;      // 1 minute window
@@ -32,8 +23,6 @@ $max_submissions = 3;
 if (!isset($_SESSION['contact_times'])) {
     $_SESSION['contact_times'] = [];
 }
-
-// Remove timestamps older than the window
 $_SESSION['contact_times'] = array_filter(
     $_SESSION['contact_times'],
     fn($t) => ($now - $t) < $window
@@ -47,7 +36,6 @@ if (count($_SESSION['contact_times']) >= $max_submissions) {
     ]));
 }
 
-// ── Read & Sanitize Inputs ───────────────────────────────────
 $raw = [
     'first_name' => $_POST['fname']    ?? '',
     'last_name'  => $_POST['lname']    ?? '',
@@ -56,10 +44,8 @@ $raw = [
     'message'    => $_POST['message']  ?? '',
 ];
 
-// Strip tags and trim
 $data = array_map(fn($v) => trim(strip_tags($v)), $raw);
 
-// ── Server-side Validation ───────────────────────────────────
 $errors = [];
 
 if (empty($data['first_name']) || strlen($data['first_name']) > 100) {
@@ -82,13 +68,11 @@ if (strlen($data['message']) < 20 || strlen($data['message']) > 5000) {
     $errors['message'] = 'Message must be between 20 and 5000 characters.';
 }
 
-// Return validation errors
 if (!empty($errors)) {
     http_response_code(422);
     exit(json_encode(['success' => false, 'errors' => $errors]));
 }
 
-// ── Save to Database ─────────────────────────────────────────
 try {
     $pdo = getDB();
 
@@ -117,20 +101,16 @@ try {
     exit(json_encode(['success' => false, 'message' => 'Database error. Please try again later.']));
 }
 
-// ── Send Email Notification ──────────────────────────────────
 $to      = 'sohailmian@email.com'; // ← apna email yahan
 $subject = '[Portfolio Inquiry] ' . $data['subject'];
 
 $emailBody = "
 New contact message received on your portfolio.\n
---------------------------------------------------
 Name    : {$data['first_name']} {$data['last_name']}
 Email   : {$data['email']}
 Subject : {$data['subject']}
---------------------------------------------------
 Message :
 {$data['message']}
---------------------------------------------------
 Received : " . date('Y-m-d H:i:s') . "
 Record ID: #{$insertId}
 ";
@@ -139,14 +119,10 @@ $headers  = "From: noreply@sohailmian.com\r\n";
 $headers .= "Reply-To: {$data['email']}\r\n";
 $headers .= "X-Mailer: PHP/" . phpversion();
 
-// mail() function — works on cPanel/shared hosting
-// For production, use PHPMailer + SMTP for reliable delivery
 @mail($to, $subject, $emailBody, $headers);
 
-// ── Record submission time for rate limiting ─────────────────
 $_SESSION['contact_times'][] = $now;
 
-// ── Send confirmation email to sender ────────────────────────
 $confirmSubject = "Thanks for reaching out, {$data['first_name']}!";
 $confirmBody = "
 Hi {$data['first_name']},
@@ -162,12 +138,11 @@ Full Stack Developer
 sohailmian@email.com
 ";
 
-$confirmHeaders  = "From: Sohail Mian <noreply@sohailmian.com>\r\n";
-$confirmHeaders .= "Reply-To: sohailmian@email.com\r\n";
+$confirmHeaders  = "From: Sohail Mian <noreply@sohailmian963.com>\r\n";
+$confirmHeaders .= "Reply-To: sohailmian963@email.com\r\n";
 
 @mail($data['email'], $confirmSubject, $confirmBody, $confirmHeaders);
 
-// ── Success Response ─────────────────────────────────────────
 header('Content-Type: application/json');
 echo json_encode([
     'success' => true,
