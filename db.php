@@ -1,13 +1,9 @@
 <?php
-// ============================================================
-// db.php — Database Connection (PDO)
-// Place this outside public root for security, or protect it
-// ============================================================
 
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'portfolio_db');
-define('DB_USER', 'root');       // ← apna DB username
-define('DB_PASS', '');           // ← apna DB password
+define('DB_USER', 'root');       
+define('DB_PASS', '');           
 define('DB_CHARSET', 'utf8mb4');
 
 function getDB(): PDO {
@@ -28,7 +24,6 @@ function getDB(): PDO {
         try {
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            // Never expose DB errors to the browser in production
             error_log('DB Connection Error: ' . $e->getMessage());
             http_response_code(500);
             die(json_encode(['success' => false, 'message' => 'Server error. Please try again later.']));
